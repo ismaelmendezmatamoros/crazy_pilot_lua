@@ -1,0 +1,13 @@
+-- build.settings for project: flappy
+-- Managed with http://OutlawGameTools.com
+-- Copyright 2017 . All Rights Reserved.
+-- cpmgen build.settings
+settings =
+{
+	orientation =
+	{
+		default ="landscapeRight",
+		content = "landscapeRight"
+	},
+
+}
