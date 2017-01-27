@@ -11,17 +11,29 @@ local physics = require( "physics" )
 local globals = require("globals")
 
 
-local function onCrash()
+local function onCrash(event)
+	print("crashed")
 end
 
-local function onPass()
+local function onPass(event)
+	if(event.phase ~= "ended") then
+		return
+	end
+	print("not passed")
 end
 
-local function createLineSensor(position_x, listener)
+local function bakclineTouched(event) 
+------------------------------------------------
+
+end
+
+local function createLineSensor(position_x, name, listener)
 	local globals = require("globals")
 
 	local line = display.newLine(position_x, display.contentHeight, position_x, 0)
+	line.myName = name
 	physics.addBody(line, "kinematic", {isSensor = true})
+	Runtime:addEventListener("collision", listener)
 	return line
 end
 
@@ -44,7 +56,6 @@ local function getNextPass(center, height)
 	end
 	local r2 = math.random()
 	local new_height = r2 * (globals.pass_size.max - globals.pass_size.min) + globals.pass_size.min	
-	print ("CENTER: " .. new_center .. " ALT: " .. new_height)
 	return new_center, new_height
 end
 
@@ -58,17 +69,15 @@ local function createWall(type_ , tile, width, height, listener)
 	local tex_height = wall.contentHeight
 	local tex_width = wall.contentWidth
 	wall.fill.scaleY =	display.contentHeight / (tex_height  * 4) 
-
+	wall.myName = "wall"
 	return wall
 end
 
 local function moveLines()
 	local globals = require("globals")
-	print("walllsss:  " .. #globals.walls)
 	for i = 1, #globals.walls do 
 		local wall = globals.walls[i]
 		wall[3].x = wall[1].x
-		print(#wall)
 	end
 end
 
@@ -89,9 +98,9 @@ local function createPass(tile, width, pass_centre, pass_height, listener_crash,
 	local upper = createWall(globals.bottom, tile, width, abs_height_up, listener_crash)
 	lower.x = display.contentWidth + 0.5 * width
 	upper.x = display.contentWidth + 0.5 * width
-	local line = createLineSensor(upper.x, listener_pass)
+	local line = createLineSensor(upper.x, "wall_line", listener_pass)
 
-	local group = {}--{["lower"] = lower, ["upper"] = upper, ["line"] = line}
+	local group = {}
 	group[#group + 1] = lower
 	group[#group + 1] = upper
 	group[#group + 1] = line
@@ -103,24 +112,18 @@ local function animateWalls(time, center, height )
 	local globals = require("globals")
 
 	local tile_index = math.random(#globals.tiles)
-	print("TILE: " .. globals.tiles[tile_index])
-	local wall = createPass(globals.tiles[tile_index], globals.wall_width, center, height, onCrash, onPass)	
 
+	local wall = createPass(globals.tiles[tile_index], globals.wall_width, center, height, onCrash, onPass)	
 	local k
-	------
 	for k = 1, #wall do
 		physics.addBody(wall[k], "kinematic")
 		wall[k]:setLinearVelocity(-time,0)
 	end
-	--]]
-
 	globals.walls[#globals.walls + 1] = wall
 	local function removeWall()
 		table.remove(globals.walls, 1)
 		wall:removeSelf()
 	end
-
-	--transition.to(wall, {time = time, x = 0 - globals.wall_width,  onComplete = removeWall})
 end
 
 local function createBgLayers(names)
@@ -133,16 +136,21 @@ local function createBgLayers(names)
 	end
 end
 
-local function createPlane(filename, width, porition_x, position_y)
+local function createPlane(filename, width, position_x, position_y, impulse_force)
 	local globals = require("globals") 
 
-	globals.plane = display.newImage(filename)
-	local scale = width / globals.plane.width
-	physics.addBody(globals.plane)
-	globals.plane:scale(scale, scale)
-	globals.plane.x =  porition_x
-	globals.plane.y =  position_y
-	
+	local aux = display.newImage(filename, {isVisible = false})
+	aux.isVisible = false
+	local scale = width / aux.width
+	globals.plane = display.newRect( position_x, position_y, aux.width  *scale, aux.height * scale)
+	globals.plane.fill = { type = "image", filename = filename }
+	globals.plane.myName = "plane"
+	physics.addBody(globals.plane, {density = 1})
+	local function impulse(event)
+		globals.plane:applyLinearImpulse(0, impulse_force, globals.plane.x, globals.plane.y)
+		return true
+	end
+	display.currentStage:addEventListener( "tap", impulse )
 end
 
 
@@ -155,10 +163,9 @@ physics.setDrawMode( "hybrid" )
 	display.setStatusBar(display.HiddenStatusBar) 
 	display.setDefault( "textureWrapX", "repeat" )
 	display.setDefault( "textureWrapY", "repeat" )
-
 	createBgLayers(globals.bg_names)
-	createPlane("plane2.jpg", globals.wall_width,  globals.wall_width * 2, display.contentHeight * 0.25)
-	globals.back_line = createLineSensor(20, 0)
+	createPlane("plane2.jpg", globals.wall_width,  globals.wall_width * 2, display.contentHeight * 0.25, -30)
+	globals.back_line = createLineSensor(20,"back_line", onCrash)
 	Runtime:addEventListener("enterFrame", onEnterFrame)
 
 end
@@ -168,10 +175,10 @@ local center, height = 0.5, 0.2
 lambda = function() 
 		center, height = getNextPass(center, height)
 		animateWalls(300, center, height, onCrash, onCrash) 
-		globals.plane:applyLinearImpulse(0,-15, globals.plane.x, globals.plane.y)
+		--globals.plane:applyLinearImpulse(0,-1, globals.plane.x, globals.plane.y)
 end
 
-timer.performWithDelay(800, lambda, -1)
+timer.performWithDelay(1000, lambda, -1)
 
 
 
