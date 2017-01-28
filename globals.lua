@@ -1,5 +1,8 @@
 
 globals = {}
+globals.timer = {}
+globals.status = "playing"
+globals.gameover_group ={}
 globals.top = "top"
 globals.bottom = "bottom"
 globals.walls = {}
@@ -7,7 +10,7 @@ globals.tiles = {"brick.jpg", "grey_brick.jpg", "black_brick.jpg", "black2_brick
 globals.wall_width = display.contentWidth * 0.08
 globals.pass_size = {min = 0.3, max = 0.6}
 globals.bg = {}
-globals.bg_names = {"bg3.png","bg2.gif","bg1.png"}
+globals.bg_names = {"bgg1.jpg","bg2.gif","bg1.png"}
 globals.plane = {}
 globals.back_line = {}
 globals.fire_emitter = {}

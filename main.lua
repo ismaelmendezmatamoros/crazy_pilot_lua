@@ -10,7 +10,61 @@
 local physics = require( "physics" )
 local globals = require("globals")
 
+--[[
+
+
+---]]
+
+
+local init
+
+local function screen_change_mode()
+	local globals = require("globals")
+    --display.currentStage:removeEventListener( "tap", impulse )
+    --display.currentStage:removeEventListener( "tap", impulse)
+    Runtime:removeEventListener("enterFrame")
+    transition.cancel()
+    physics.stop()
+	globals.walls = {}
+	globals.bg = nil
+	globals.bg = {}
+
+	while display.currentStage.numChildren > 0 do
+        local child = display.currentStage[1]
+        if child then 
+        	child:removeSelf() 
+       	end
+        print("middleGroup.numChildren" , display.currentStage.numChildren )
+    end
+
+	print("transition")
+	if(globals.status == "game_over") then
+		init()
+	end
+
+end
+
 local function gameOver() 
+	local globals = require("globals")
+
+	local function showText() 
+		globals.status = "game_over"
+		local text = display.newText( "You are dead", display.contentWidth * 0.5, display.contentHeight * 0.5, native.systemFont, 200 )
+		text.alpha = 0
+		text:setFillColor( 1, 0, 0 )
+		transition.to(text, {time = 1000 , alpha = 1})
+	end
+	timer.cancel(globals.timer)
+	globals.gameover_group = display.newGroup()
+	local veil = display.newRect(display.contentWidth * 0.5, display.contentHeight * 0.5, display.contentWidth, display.contentHeight)
+	veil.alpha = 0.1
+	veil.fill = {0, 0, 0}
+	veil:toFront()
+	globals.gameover_group:insert(veil)
+	transition.to(veil, {time = 1000 , alpha = 1, onComplete = showText})
+	display.currentStage:addEventListener( "tap", screen_change_mode )
+
+
 end
 
 local function onCrash(event)
@@ -189,6 +243,7 @@ local function createPlane(filename, width, position_x, position_y, impulse_forc
 	local aux = display.newImage(filename, {isVisible = false})
 	aux.isVisible = false
 	local scale = width / aux.width
+	globals.plane = nil
 	globals.plane = display.newRect( position_x, position_y, aux.width  *scale, aux.height * scale)
 	globals.plane.fill = { type = "image", filename = filename }
 	globals.plane.myName = "plane"
@@ -196,8 +251,10 @@ local function createPlane(filename, width, position_x, position_y, impulse_forc
 	physics.addBody(globals.plane, {density = 1})
 	local function impulse(event)
 		globals.plane:applyLinearImpulse(0, impulse_force, globals.plane.x, globals.plane.y)
+		print("imppulsessss")
 		return true
 	end
+	--display.currentStage:removeEventListener( "tap", impulse )
 	display.currentStage:addEventListener( "tap", impulse )
 end
 
@@ -205,6 +262,7 @@ end
 
 local function setup()
 	local globals = require("globals")
+	globals.status = "playing"
 		physics.start()
 --physics.setDrawMode( "hybrid" )
 	math.randomseed(os.time())
@@ -229,24 +287,23 @@ local function setup()
 	physics.addBody(lineup, "kinematic", {isSensor = true})
 	lineup:addEventListener("collision", bakclineTouched)
 	lineup.isVisible = false
-
-
-
 end
 
-setup()
-local center, height = 0.5, 0.2
-lambda = function() 
+init =  function()
+	setup()
+	local center, height = 0.5, 0.2
+	lambda = function() 
 		center, height = getNextPass(center, height)
 		removeOldWall()
 		animateWalls(300, center, height, onCrash, onCrash) 
 		--globals.plane:applyLinearImpulse(0,-1, globals.plane.x, globals.plane.y)
+	end
+	globals.timer = timer.performWithDelay(1000, lambda, -1)
 end
 
-timer.performWithDelay(1000, lambda, -1)
+--globals_bak = globals
 
-
-
+init()
   
 
 
