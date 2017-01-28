@@ -10,36 +10,30 @@
 local physics = require( "physics" )
 local globals = require("globals")
 
---[[
-
-
----]]
-
-
 local init
-
 local function screen_change_mode()
 	local globals = require("globals")
     --display.currentStage:removeEventListener( "tap", impulse )
     --display.currentStage:removeEventListener( "tap", impulse)
-    Runtime:removeEventListener("enterFrame")
-    transition.cancel()
-    physics.stop()
-	globals.walls = {}
-	globals.bg = nil
-	globals.bg = {}
+    --Runtime:removeEventListener("enterFrame")
+    --transition.cancel()
+    --physics.stop()
 
-	while display.currentStage.numChildren > 0 do
+	--globals.bg = nil
+	--globals.bg = {}
+
+	--[[while display.currentStage.numChildren > 0 do
         local child = display.currentStage[1]
         if child then 
         	child:removeSelf() 
        	end
         print("middleGroup.numChildren" , display.currentStage.numChildren )
-    end
+    end--]]
 
 	print("transition")
 	if(globals.status == "game_over") then
-		init()
+		--transition.to()
+		--init()
 	end
 
 end
@@ -62,6 +56,7 @@ local function gameOver()
 	veil:toFront()
 	globals.gameover_group:insert(veil)
 	transition.to(veil, {time = 1000 , alpha = 1, onComplete = showText})
+	showText()
 	display.currentStage:addEventListener( "tap", screen_change_mode )
 
 
@@ -254,7 +249,7 @@ local function createPlane(filename, width, position_x, position_y, impulse_forc
 		print("imppulsessss")
 		return true
 	end
-	--display.currentStage:removeEventListener( "tap", impulse )
+	--display.currentStage:removeEventListener( "tap")
 	display.currentStage:addEventListener( "tap", impulse )
 end
 
@@ -290,7 +285,7 @@ local function setup()
 end
 
 init =  function()
-	setup()
+
 	local center, height = 0.5, 0.2
 	lambda = function() 
 		center, height = getNextPass(center, height)
@@ -302,7 +297,7 @@ init =  function()
 end
 
 --globals_bak = globals
-
+	setup()
 init()
   
 
