@@ -7,33 +7,51 @@
 -- Copyright 2017 . All Rights Reserved.
 ---- cpmgen main.lua
 
+
+
 local physics = require( "physics" )
 local globals = require("globals")
 
+--[[
+---]]
+
+
 local init
+
+
+local function impulse(event)
+	local globals = require("globals") 
+	if(globals.status ~= "playing") then
+		return true
+	end
+	globals.plane:applyLinearImpulse(0, globals.impulse_force, globals.plane.x, globals.plane.y)
+	print("imppulsessss")
+	return true
+end
+
 local function screen_change_mode()
 	local globals = require("globals")
     --display.currentStage:removeEventListener( "tap", impulse )
     --display.currentStage:removeEventListener( "tap", impulse)
-    --Runtime:removeEventListener("enterFrame")
-    --transition.cancel()
-    --physics.stop()
+    Runtime:removeEventListener("enterFrame")
+    transition.cancel()
 
-	--globals.bg = nil
-	--globals.bg = {}
-
-	--[[while display.currentStage.numChildren > 0 do
+	globals.walls = {}
+	globals.bg = nil
+	globals.bg = {}
+	physics.removeBody(globals.plane)
+    physics.stop()
+	while display.currentStage.numChildren > 0 do
         local child = display.currentStage[1]
         if child then 
         	child:removeSelf() 
        	end
         print("middleGroup.numChildren" , display.currentStage.numChildren )
-    end--]]
-
+    end
+    globals.veil:removeEventListener( "tap", screen_change_mode )
 	print("transition")
 	if(globals.status == "game_over") then
-		--transition.to()
-		--init()
+		init()
 	end
 
 end
@@ -41,43 +59,27 @@ end
 local function gameOver() 
 	local globals = require("globals")
 
+	local veil = globals.veil
+	veil:removeEventListener("tap", impulse)
 	local function showText() 
 		globals.status = "game_over"
 		local text = display.newText( "You are dead", display.contentWidth * 0.5, display.contentHeight * 0.5, native.systemFont, 200 )
 		text.alpha = 0
 		text:setFillColor( 1, 0, 0 )
-		transition.to(text, {time = 1000 , alpha = 1})
+		transition.to(text, {time = 1000 , alpha = 1, onComplete = function() veil:addEventListener( "tap", screen_change_mode ) end })
 	end
 	timer.cancel(globals.timer)
+	timer.cancel(globals.difficulty_timer)
 	globals.gameover_group = display.newGroup()
-	local veil = display.newRect(display.contentWidth * 0.5, display.contentHeight * 0.5, display.contentWidth, display.contentHeight)
+	--display.newRect(display.contentWidth * 0.5, display.contentHeight * 0.5, display.contentWidth, display.contentHeight)
 	veil.alpha = 0.1
 	veil.fill = {0, 0, 0}
-	veil:toFront()
+	veil:toFront()--
 	globals.gameover_group:insert(veil)
 	transition.to(veil, {time = 1000 , alpha = 1, onComplete = showText})
-	showText()
-	display.currentStage:addEventListener( "tap", screen_change_mode )
+	
 
 
-end
-
-local function onCrash(event)
-	local globals = require("globals")
-		if(event.phase ~= "ended") then
-		return
-	end
-	print("creassed")
-	globals.plane.live_points = globals.plane.live_points - 1
-	globals.fire_emitter.maxParticles = 10 *  (3 - globals.plane.live_points)
-	globals.fire_emitter.isVisible = true 
-end
-
-local function onPass(event)
-	if(event.phase ~= "ended") then
-		return
-	end
-	--print("passed")
 end
 
 local function bakclineTouched(event) 
@@ -85,9 +87,43 @@ local function bakclineTouched(event)
 if(event.phase ~= "ended") then
 		return
 	end
-	print(event.other.myName)
 	gameOver()
 end
+
+
+local function onCrash(event)
+	local globals = require("globals")
+		if(event.phase ~= "ended") then
+		return
+	end	
+	globals.plane.live_points = globals.plane.live_points - 1
+	globals.fire_emitter.maxParticles = 16 *  ( 3 - globals.plane.live_points)
+	globals.fire_emitter.isVisible = true
+	local hull = 0 
+	if globals.plane.live_points > 0 then 
+		hull = globals.plane.live_points
+	end
+	globals.lives_text.text = "Hull " .. hull
+	print("creassed")
+	if(globals.plane.live_points == 0) then
+		globals.plane:setLinearVelocity(-300,0)
+		globals.plane:applyTorque( 200 )
+
+		globals.fire_emitter.maxParticles = 200
+		return
+	end
+end
+
+local function onPass(event)
+	local globals = require("globals")
+	if(event.phase ~= "ended") then
+		return
+	end
+	 globals.score =  globals.score + 1
+	globals.score_text.text = "score " .. globals.score
+end
+
+
 
 
 
@@ -154,6 +190,7 @@ local function removeOldWall()
 			local wall = globals.walls[1]
 			if (wall[1].x < -globals.wall_width * 2) then				
 				for j = 1, #wall do
+					physics.removeBody(wall[j])
 					wall[j]:removeSelf()
 				end
 			table.remove(globals.walls, 1)
@@ -167,11 +204,8 @@ local function onEnterFrame(event)
 	removeOldWall()
 	globals.fire_emitter.x = globals.plane.x
 	globals.fire_emitter.y = globals.plane.y
-	globals.fire_emitter.rotation =  globals.plane.rotation
-
+	--globals.fire_emitter.rotation =  globals.plane.rotation
 	moveLines()
-
-
 end
 
 local function createPass(tile, width, pass_centre, pass_height, listener_crash, listener_pass)
@@ -211,6 +245,8 @@ local function animateWalls(time, center, height )
 		table.remove(globals.walls, 1)
 		wall:removeSelf()
 	end
+	globals.score_text:toFront()
+	globals.lives_text:toFront()
 end
 
 local function createBgLayers(names, basespeed)
@@ -232,6 +268,7 @@ local function createBgLayers(names, basespeed)
 	end
 end
 
+
 local function createPlane(filename, width, position_x, position_y, impulse_force)
 	local globals = require("globals") 
 
@@ -244,13 +281,9 @@ local function createPlane(filename, width, position_x, position_y, impulse_forc
 	globals.plane.myName = "plane"
 	globals.plane.live_points = 3
 	physics.addBody(globals.plane, {density = 1})
-	local function impulse(event)
-		globals.plane:applyLinearImpulse(0, impulse_force, globals.plane.x, globals.plane.y)
-		print("imppulsessss")
-		return true
-	end
-	--display.currentStage:removeEventListener( "tap")
-	display.currentStage:addEventListener( "tap", impulse )
+
+	--display.currentStage:removeEventListener( "tap", impulse )
+	globals.veil:addEventListener( "tap", impulse )
 end
 
 
@@ -260,6 +293,13 @@ local function setup()
 	globals.status = "playing"
 		physics.start()
 --physics.setDrawMode( "hybrid" )
+	globals.score = 0
+	globals.pass_size = globals.pass_size_bak
+	globals.veil = display.newRect(display.contentWidth * 0.5, display.contentHeight * 0.5, display.contentWidth, display.contentHeight)
+	globals.veil.alpha = 0.1
+	globals.veil.fill = {0, 0, 0}
+	globals.veil:toFront()
+
 	math.randomseed(os.time())
 	display.setStatusBar(display.HiddenStatusBar) 
 	display.setDefault( "textureWrapX", "repeat" )
@@ -282,24 +322,79 @@ local function setup()
 	physics.addBody(lineup, "kinematic", {isSensor = true})
 	lineup:addEventListener("collision", bakclineTouched)
 	lineup.isVisible = false
+	globals.lives_text = display.newText( "Hull " .. globals.plane.live_points, display.contentWidth * 0.5, display.contentHeight * 0.05, native.systemFont, 30 )
+	globals.lives_text:setFillColor(0,1,0)
+
+	globals.score_text = display.newEmbossedText( "score " .. globals.score, display.contentWidth * 0.5, display.contentHeight * 0.95, native.systemFont, 30 )
+	local color = {highlight = { r=0, g=0, b=1 }, shadow = { r=0, g=1, b=1 } }
+	globals.score_text:setEmbossColor(color)
+end
+
+function showSplashScreen(bg_name,title_name, next_step)
+	local bg = {}
+	
+	tap = function()
+		bg:removeEventListener("tap", tap)
+		transition.cancel()
+		while display.currentStage.numChildren > 0 do
+        	local child = display.currentStage[1]
+        	child:removeSelf() 
+        end
+       	next_step()       
+	end	
+	local title = function() 
+		local title = display.newRect(display.contentWidth * 0.5, display.contentHeight * 0.2, display.contentWidth * 0.8, display.contentHeight * 0.2)
+		title.alpha = 0
+		title.fill = {type = "image", filename = title_name}
+		transition.to(title, {time = 1000, alpha = 1, })
+
+	end	
+	bg = display.newRect(display.contentWidth * 0.5, display.contentHeight * 0.5, display.contentWidth, display.contentHeight)
+	bg:addEventListener("tap", tap)
+	bg.alpha = 0
+	bg.fill = {type = "image", filename = bg_name}
+	transition.to(bg, {time = 1000, alpha = 1, onComplete = title})
+	
+	--bg:toBack()
+
+	--[[local veil = display.newRect(display.contentWidth * 0.5, display.contentHeight * 0.5, display.contentWidth, display.contentHeight)
+	globals.veil.alpha = 1
+	globals.veil.fill = {0, 0, 0}
+	globals.veil:toFront()--]]
+end
+
+local function increaseDifficulty()
+	local globals = require("globals")
+	globals.pass_size.max = globals.pass_size.max - 0.1
+	local text = display.newEmbossedText( "HARDER", display.contentWidth * 0.5, display.contentHeight * 0.7, native.systemFont, 50 )
+	text.alpha = 0
+	local disappear = function() 
+		transition.to(text, {time = 1000, alpha = 0, onComplete = function() text:removeSelf() end})
+	end
+	local color = {highlight = { r=0, g=0, b=1 }, shadow = { r=0, g=1, b=1 } }
+	text:setEmbossColor(color)
+	transition.to(text, {time = 1000, alpha = 1, onComplete = disappear})
+	print("harder ".. globals.pass_size.max)
 end
 
 init =  function()
-
+	setup()
 	local center, height = 0.5, 0.2
+	local init_time = system.getTimer()
 	lambda = function() 
 		center, height = getNextPass(center, height)
 		removeOldWall()
 		animateWalls(300, center, height, onCrash, onCrash) 
 		--globals.plane:applyLinearImpulse(0,-1, globals.plane.x, globals.plane.y)
 	end
+	
 	globals.timer = timer.performWithDelay(1000, lambda, -1)
+	globals.difficulty_timer = timer.performWithDelay(20 * 1000, increaseDifficulty, 3)
 end
 
 --globals_bak = globals
-	setup()
-init()
+showSplashScreen("turbulence.jpg", "title.png", init)
+--init()
   
-
 
 

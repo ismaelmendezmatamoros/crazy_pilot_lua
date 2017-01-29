@@ -1,6 +1,12 @@
 
 globals = {}
 globals.timer = {}
+globals.difficulty_timer = {}
+globals.score = 0
+globals.veil = {}
+globals.lives_text = {}
+globals.score_text = {}
+globals.impulse_force = -30
 globals.status = "playing"
 globals.gameover_group ={}
 globals.top = "top"
@@ -8,10 +14,11 @@ globals.bottom = "bottom"
 globals.walls = {}
 globals.tiles = {"brick.jpg", "grey_brick.jpg", "black_brick.jpg", "black2_brick.jpg", "brick_large.jpg"}
 globals.wall_width = display.contentWidth * 0.08
-globals.pass_size = {min = 0.3, max = 0.6}
+globals.pass_size = {min = 0.3, max = 0.7}
+globals.pass_size_bak = {min = 0.3, max = 0.7}
 globals.bg = {}
 globals.bg_names = {"bgg1.jpg","bg2.gif","bg1.png"}
-globals.plane = {}
+globals.plane = nil
 globals.back_line = {}
 globals.fire_emitter = {}
 globals.emitterParams = {
